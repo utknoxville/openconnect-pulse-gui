@@ -1,20 +1,16 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 from __future__ import print_function
 
-try:
-    import gi
-except ImportError:
-    try:
-        import pgi as gi
-    except ImportError:
-        gi = None
-if gi is None:
-    raise ImportError("Either gi (PyGObject) or pgi module is required.")
+import gi
 
 import argparse
 import logging
 import os
-import queue
+
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 import subprocess
 import sys
 import time
@@ -30,11 +26,10 @@ gi.require_version("WebKit2", "4.0")
 from gi.repository import Gtk, WebKit2, GLib
 
 log = logging.getLogger("pulsegui")
-#logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(level=logging.INFO)
 
-class SAMLLoginView:
-    def __init__(self, uri, html=None, verbose=False, cookies=None, verify=True):
+
+class PulseLoginView:
+    def __init__(self, uri, html=None, verbose=False, cookies=None, verify=True, session_cookie_name='DSID'):
         self._window = Gtk.Window()
 
         # API reference: https://lazka.github.io/pgi-docs/#WebKit2-4.0
@@ -47,6 +42,7 @@ class SAMLLoginView:
         self.success = False
         self.verbose = verbose
         self.auth_cookie = None
+        self._session_cookie_name = session_cookie_name
         self._log = logging.getLogger(__name__)
 
         self._ctx = WebKit2.WebContext.get_default()
@@ -54,15 +50,15 @@ class SAMLLoginView:
             self._ctx.set_tls_errors_policy(WebKit2.TLSErrorsPolicy.IGNORE)
 
         self._cookies = self._ctx.get_cookie_manager()
+        self._cookies.set_accept_policy(WebKit2.CookieAcceptPolicy.ALWAYS)
         if cookies:
             log.info("Saving cookies to %s", cookies)
-            self._cookies.set_accept_policy(WebKit2.CookieAcceptPolicy.ALWAYS)
             self._cookies.set_persistent_storage(
                 cookies, WebKit2.CookiePersistentStorage.SQLITE
             )
 
         self._webview = WebKit2.WebView()
-        self._webview.connect('load-failed-with-tls-errors', self._tls_error, None)
+        self._webview.connect("load-failed-with-tls-errors", self._tls_error, None)
 
         self._window.resize(500, 500)
         self._window.add(self._webview)
@@ -87,6 +83,8 @@ class SAMLLoginView:
     def _close(self, *args, **kwargs):
         if not self.closed:
             self.closed = True
+            self._log.info('closing GTK')
+            #time.sleep(.1)
             Gtk.main_quit()
 
     def _log_request(self, webview, resource, request):
@@ -101,7 +99,11 @@ class SAMLLoginView:
         resource.connect("sent-request", self._log_sent_request, (request_id, request))
 
     def _tls_error(self, webview, failing_uri, certificate, errors, user_data):
-        self._log.error('TLS error on {} : {}. Use --insecure to bypass certificate validation.'.format(failing_uri, ', '.join(errors.value_nicks)))
+        self._log.error(
+            "TLS error on {} : {}. Use --insecure to bypass certificate validation.".format(
+                failing_uri, ", ".join(errors.value_nicks)
+            )
+        )
 
     def _log_sent_request(self, resource, request, redirected_response, userdata):
         request_id, request = userdata
@@ -168,14 +170,13 @@ class SAMLLoginView:
             #                cookie.secure,
             #                cookie.http_only,
             #            )
-            if cookie.name == "DSID":
+            if cookie.name == self._session_cookie_name:
                 if not self.success:
                     # Only call destroy once
                     self.auth_cookie = cookie
                     self.success = True
-                    print("Got auth cookie")
+                    log.info("Got auth cookie")
                     self._window.destroy()
-        # print()
 
 
 def parse_args(args=None):
@@ -184,27 +185,16 @@ def parse_args(args=None):
     p.add_argument(
         "--insecure", action="store_true", help="Ignore invalid server certificate",
     )
-    p.add_argument('--session-cookie', help="Name of the session cookie (default: %(default)s)", default="DSID")
-    x = p.add_mutually_exclusive_group()
-    x.add_argument(
-        "-C",
-        "--cookies",
-        default="~/.config/pulse-gui-cookies",
-        help="Use and store cookies in this file (instead of default %(default)s)",
-    )
-    x.add_argument(
-        "-K",
-        "--no-cookies",
-        dest="cookies",
-        action="store_const",
-        const=None,
-        help="Don't use or store cookies at all",
+    p.add_argument(
+        "--session-cookie-name",
+        default="DSID",
+        help=argparse.SUPPRESS,  # "Name of the session cookie (default: %(default)s)"
     )
     x = p.add_mutually_exclusive_group()
     x.add_argument(
         "-v",
         "--verbose",
-        default=1,
+        default=0,
         action="count",
         help="Increase verbosity of explanatory output to stderr",
     )
@@ -216,67 +206,91 @@ def parse_args(args=None):
         const=0,
         help="Reduce verbosity to a minimum",
     )
+
+    # The functionality for saving non-session cookies exists
+    # however, it is hidden from help due to security concerns.
+    #
+    # Note that if you use this, cookies will be saved in PLAIN TEXT.
+    #
+    # This could be worked around by implementing the Soup.CookieJar
+    # interface in a secure manner
+    #
+    p.add_argument(
+        "-p",
+        "--persist-cookies",
+        action="store_true",
+        help=argparse.SUPPRESS,  # "Save non-session cookies to disk",
+    )
+    p.add_argument(
+        "-c",
+        "--cookie-file",
+        default="~/.config/pulse-gui-cookies",
+        help=argparse.SUPPRESS,  # "Store cookies in this file (instead of default %(default)s)",
+    )
     args = p.parse_args(args=None)
 
-    if args.cookies:
-        args.cookies = os.path.expanduser(args.cookies)
+    if args.persist_cookies and args.cookie_file:
+        args.cookie_file = os.path.expanduser(args.cookie_file)
 
     return p, args
 
 
-def openconnect(server, authcookie, run_openconnect=True):
+def do_openconnect(server, authcookie, run_openconnect=True):
     cmd = [
         "openconnect",
         "--protocol",
         "nc",
         "-C",
-        "{}={}".format(authcookie.name, authcookie.value),
+        '"{}={}"'.format(authcookie.name, authcookie.value),
         server,
     ]
     if not run_openconnect:
         print(" ".join(cmd))
         return None
-    # create = asyncio.create_subprocess_exec(*cmd) #, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-    # proc = yield from create
-    # ret = yield from proc.wait()
     else:
         proc = subprocess.Popen(cmd)
         print(proc)
         ret = proc.wait()
         return ret
-    # stdout, stderr = await proc.communicate()
-    # print(stdout.decode())
 
 
-def saml_thread(jobQ, retQ, closeEvent):
+def saml_thread(jobQ, returnQ, closeEvent):
     while not closeEvent.is_set():
         try:
             job = jobQ.get(block=False)
         except queue.Empty:
             time.sleep(0.1)
             continue
-        slv = SAMLLoginView(
+        slv = PulseLoginView(
             job.server,
             verbose=job.verbose,
-            cookies=job.cookies,
+            cookies=job.cookie_file if job.persist_cookies else None,
             verify=not job.insecure,
+            session_cookie_name=job.session_cookie_name,
         )
         Gtk.main()
         if slv.user_closed:
-            retQ.put({"error": "Login window closed by user", "retry": False})
+            returnQ.put({"error": "Login window closed by user", "retry": False})
         elif not slv.success:
-            retQ.put(
+            returnQ.put(
                 {
                     "error": "Login window closed without producing session cookie",
                     "retry": True,
                 }
             )
         else:
-            retQ.put({"auth_cookie": slv.auth_cookie})
+            returnQ.put({"auth_cookie": slv.auth_cookie})
 
 
 if __name__ == "__main__":
     p, args = parse_args()
+
+    log_levels = [logging.WARNING, logging.INFO, logging.DEBUG]
+    if args.verbose > 2:
+        log_level = log_levels[-1]
+    else:
+        log_level = log_levels[args.verbose]
+    logging.basicConfig(level=log_level)
 
     if os.geteuid() != 0:
         log.warning(
@@ -291,16 +305,16 @@ if __name__ == "__main__":
     # when closeEvent is used, the main python thread calls Gtk.main_quit()
 
     jobQ = queue.Queue()
-    retQ = queue.Queue()
+    returnQ = queue.Queue()
     closeEvent = threading.Event()
 
-    webkitthread = threading.Thread(target=saml_thread, args=(jobQ, retQ, closeEvent))
+    webkitthread = threading.Thread(target=saml_thread, args=(jobQ, returnQ, closeEvent))
     webkitthread.start()
 
     while True:
         try:
             jobQ.put(args)
-            ret = retQ.get()
+            ret = returnQ.get()
             if "error" in ret:
                 log.error(ret["error"])
                 if not ret["retry"]:
@@ -309,7 +323,7 @@ if __name__ == "__main__":
                 continue
 
             # extract response and convert to OpenConnect command-line
-            exit_code = openconnect(
+            exit_code = do_openconnect(
                 args.server, ret["auth_cookie"], run_openconnect=run_openconnect
             )
         except KeyboardInterrupt:
@@ -319,9 +333,7 @@ if __name__ == "__main__":
         else:
             if exit_code is None:
                 break
-            # print(exit_code)
             log.info("Got exit code %d. Retrying..", exit_code)
             time.sleep(1)
     closeEvent.set()
     webkitthread.join()
-    sys.exit(0)
