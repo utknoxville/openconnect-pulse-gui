@@ -300,6 +300,8 @@ def main():
         log_level = log_levels[args.verbose]
     logging.basicConfig(level=log_level)
 
+    run_openconnect = True
+
     if os.geteuid() != 0:
         log.warning(
             "Running as non-root user. Will not run openconnect, only print the command"
