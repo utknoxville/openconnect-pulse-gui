@@ -1,4 +1,4 @@
-# openconnect-nc-gui
+# openconnect-pulse-gui
 
 This script provides a wrapper around [OpenConnect](https://www.infradead.org/openconnect/) which allows a user to log in through a WebKitGTK2 window.  This allows OpenConnect to be compatible with web-based authentication mechanisms, such as SAML.
 
