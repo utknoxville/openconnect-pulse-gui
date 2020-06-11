@@ -29,7 +29,15 @@ log = logging.getLogger("pulsegui")
 
 
 class PulseLoginView:
-    def __init__(self, uri, html=None, verbose=False, cookies=None, verify=True, session_cookie_name='DSID'):
+    def __init__(
+        self,
+        uri,
+        html=None,
+        verbose=False,
+        cookies=None,
+        verify=True,
+        session_cookie_name="DSID",
+    ):
         self._window = Gtk.Window()
 
         # API reference: https://lazka.github.io/pgi-docs/#WebKit2-4.0
@@ -83,8 +91,8 @@ class PulseLoginView:
     def _close(self, *args, **kwargs):
         if not self.closed:
             self.closed = True
-            self._log.info('closing GTK')
-            #time.sleep(.1)
+            self._log.info("closing GTK")
+            # time.sleep(.1)
             Gtk.main_quit()
 
     def _log_request(self, webview, resource, request):
@@ -282,7 +290,7 @@ def saml_thread(jobQ, returnQ, closeEvent):
             returnQ.put({"auth_cookie": slv.auth_cookie})
 
 
-if __name__ == "__main__":
+def main():
     p, args = parse_args()
 
     log_levels = [logging.WARNING, logging.INFO, logging.DEBUG]
@@ -308,7 +316,9 @@ if __name__ == "__main__":
     returnQ = queue.Queue()
     closeEvent = threading.Event()
 
-    webkitthread = threading.Thread(target=saml_thread, args=(jobQ, returnQ, closeEvent))
+    webkitthread = threading.Thread(
+        target=saml_thread, args=(jobQ, returnQ, closeEvent)
+    )
     webkitthread.start()
 
     while True:
@@ -337,3 +347,7 @@ if __name__ == "__main__":
             time.sleep(1)
     closeEvent.set()
     webkitthread.join()
+
+
+if __name__ == "__main__":
+    main()

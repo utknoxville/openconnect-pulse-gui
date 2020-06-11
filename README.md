@@ -4,20 +4,35 @@ This script provides a wrapper around [OpenConnect](https://www.infradead.org/op
 
 ## Requirements
 
-The script requires the following packages:
+The script can be used with python2 or python3, however python3 is recommended.  The following packages are also required:
 
-    python >=3.3
-    python-gi
-    webkit2gtk
-    openconnect
+ - python-gi or python-gobject
+ - webkit2gtk
+ - openconnect
 
-They can be installed with `pip -r requirements.txt`
+Instruction for specific distros can be found below.
+
+### Debian/Ubuntu
+
+    sudo apt install python3-gi libwebkit2gtk-4.0-37 openconnect
+
+### Fedora
+
+    sudo yum install python-gi webkit2gtk3 openconnect
+
+### Arch
+
+    sudo pacman -S python-gobject webkit2gtk openconnect
 
 ## Installation
 
-Installation can be performed using pip or directly calling `setup.py`.
+This repo can be downloaded with `git clone https://github.com/utknoxville/openconnect-pulse-gui` or via the GitHub webpage.
+
+Installation can be performed using `pip install .` or directly calling `python setup.py install`.
 
 ## Usage
+
+Once installed, the `openconnect-pulse-gui` script should be in your $PATH.  If not, the script `openconnect_pulse_gui/openconnect_pulse_gui.py` can be called directly.
 
 The only required required argument is the sign-in link / server URL.  Other arguments can be found by using `python openconnect-pulse-gui.py -h`.
 
