@@ -249,7 +249,7 @@ def do_openconnect(server, authcookie, run_openconnect=True):
         "--protocol",
         "nc",
         "-C",
-        '"{}={}"'.format(authcookie.name, authcookie.value),
+        '{}={}'.format(authcookie.name, authcookie.value),
         server,
     ]
     if not run_openconnect:
