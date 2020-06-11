@@ -14,7 +14,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
-    install_requires=["pygobject"],
+    #install_requires=["pygobject"],
     entry_points={
         "console_scripts": ["openconnect-pulse-gui = openconnect_pulse_gui:main",]
     },
