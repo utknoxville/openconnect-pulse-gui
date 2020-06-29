@@ -14,7 +14,7 @@ Instruction for specific distros can be found below.
 
 ### Debian/Ubuntu
 
-    sudo apt install python3-gi libwebkit2gtk-4.0-37 openconnect
+    sudo apt install python3-gi gir1.2-webkit2-4.0 openconnect
 
 ### Fedora
 
