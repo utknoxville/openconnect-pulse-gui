@@ -227,13 +227,13 @@ def parse_args(args=None):
         "-p",
         "--persist-cookies",
         action="store_true",
-        help=argparse.SUPPRESS,  # "Save non-session cookies to disk",
+        help="Save non-session cookies to a file",
     )
     p.add_argument(
         "-c",
         "--cookie-file",
         default="~/.config/pulse-gui-cookies",
-        help=argparse.SUPPRESS,  # "Store cookies in this file (instead of default %(default)s)",
+        help="File to store non-session cookies (default: %(default)s)",
     )
     args = p.parse_args(args=None)
 
