@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+
+"""
+This script provides a wrapper around OpenConnect which allows a user to log in
+through a WebKitGTK2 window.  This allows OpenConnect to be compatible with
+web-based authentication mechanisms, such as SAML.
+"""
+
 from __future__ import print_function
 
 import gi
@@ -29,6 +36,10 @@ log = logging.getLogger("pulsegui")
 
 
 class PulseLoginView:
+    """
+    Class responsible for displaying a single webpage during user interaction
+    """
+
     def __init__(
         self,
         uri,
@@ -169,6 +180,9 @@ class PulseLoginView:
 
 
 def parse_args(args=None, prog=None):
+    """
+    Parse command line arguments.
+    """
     p = argparse.ArgumentParser(prog=prog)
     p.add_argument("server", help="Pulse Secure Connect URL")
     p.add_argument(
@@ -225,6 +239,9 @@ def parse_args(args=None, prog=None):
 
 
 def do_openconnect(server, authcookie, run_openconnect=True):
+    """
+    Run openconnect or print information how to run it.
+    """
     cmd = [
         "openconnect",
         "--protocol",
@@ -244,6 +261,9 @@ def do_openconnect(server, authcookie, run_openconnect=True):
 
 
 def saml_thread(jobQ, returnQ, closeEvent):
+    """
+    Create web view windows until success, failure or interrupt.
+    """
     while not closeEvent.is_set():
         try:
             job = jobQ.get(block=False)
@@ -272,6 +292,9 @@ def saml_thread(jobQ, returnQ, closeEvent):
 
 
 def main(prog=None):
+    """
+    Main entry. Parse arguments, create queues, run threads.
+    """
     p, args = parse_args(prog=prog)
 
     log_levels = [logging.WARNING, logging.INFO, logging.DEBUG]
