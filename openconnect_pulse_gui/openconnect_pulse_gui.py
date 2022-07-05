@@ -92,18 +92,18 @@ class PulseLoginView:
         else:
             self._webview.load_uri(uri)
 
-    def _user_close(self, *args, **kwargs):
+    def _user_close(self, window, _event):
         self.user_closed = True
-        self._close()
+        self._close(window)
 
-    def _close(self, *args, **kwargs):
+    def _close(self, _window):
         if not self.closed:
             self.closed = True
             log.info("closing GTK")
             # time.sleep(.1)
             Gtk.main_quit()
 
-    def _log_request(self, webview, resource, request):
+    def _log_request(self, _webview, resource, request):
         request_id = self._request_id
         self._request_id += 1
         # log.debug(
@@ -114,11 +114,11 @@ class PulseLoginView:
         resource.connect("finished", self._log_resource_details, (request_id, request))
         resource.connect("sent-request", self._log_sent_request, (request_id, request))
 
-    def _tls_error(self, webview, failing_uri, certificate, errors, user_data):
+    def _tls_error(self, _webview, failing_uri, _certificate, errors, _user_data):
         log.error(
-            "TLS error on {} : {}. Use --insecure to bypass certificate validation.".format(
-                failing_uri, ", ".join(errors.value_nicks)
-            )
+            "TLS error on %s : %s. Use --insecure to bypass certificate validation.",
+            failing_uri,
+            ", ".join(errors.value_nicks)
         )
 
     def _log_sent_request(self, resource, request, redirected_response, userdata):
@@ -145,18 +145,20 @@ class PulseLoginView:
         status_code = response.get_status_code()
         content_type = response.get_mime_type()
         content_length = response.get_content_length()
-        content_details = "%d bytes of %s" % (content_length, content_type,)
-        log.debug("[RESP %d] %s: %s", request_id, status_code, content_details)
+        log.debug(
+            "[RESP %d] %s: %d bytes of %s from %s %s",
+            request_id, status_code, content_length, content_type, method, uri
+        )
 
-    def _cookie_changed(self, event):
+    def _cookie_changed(self, _event):
         uri = self._webview.get_uri()
         # if self.verbose:
         # print(event, uri)
         self._cookies.get_cookies(uri, None, self._check_for_authcookie, uri)
 
-    def _check_for_authcookie(self, source_object, res, uri):
+    def _check_for_authcookie(self, source_object, res, _uri):
         cookies = source_object.get_cookies_finish(res)
-        # print(uri)
+        # print(_uri)
         for cookie in cookies:
             #            print(
             #                " ",
@@ -233,7 +235,7 @@ def parse_args(args=None, prog=None):
     if args.persist_cookies and args.cookie_file:
         args.cookie_file = os.path.expanduser(args.cookie_file)
 
-    return parser, args
+    return args
 
 
 def do_openconnect(server, authcookie, run_openconnect=True):
@@ -245,14 +247,14 @@ def do_openconnect(server, authcookie, run_openconnect=True):
         "--protocol",
         "nc",
         "-C",
-        '{}={}'.format(authcookie.name, authcookie.value),
+        '='.join([authcookie.name, authcookie.value]),
         server,
     ]
     if not run_openconnect:
         print(" ".join(cmd))
         return None
-    else:
-        proc = subprocess.Popen(cmd)
+
+    with subprocess.Popen(cmd) as proc:
         print(proc)
         ret = proc.wait()
         return ret
@@ -293,7 +295,7 @@ def main(prog=None):
     """
     Main entry. Parse arguments, create queues, run threads.
     """
-    parser, args = parse_args(prog=prog)
+    args = parse_args(prog=prog)
 
     log_levels = [logging.WARNING, logging.INFO, logging.DEBUG]
     if args.verbose > 2:
