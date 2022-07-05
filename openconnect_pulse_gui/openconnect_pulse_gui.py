@@ -8,29 +8,27 @@ web-based authentication mechanisms, such as SAML.
 
 from __future__ import print_function
 
-import gi
-
 import argparse
 import logging
 import os
+import subprocess
+import time
+import threading
 
 try:
     import queue
 except ImportError:
     import Queue as queue
-import subprocess
-import sys
-import time
-import threading
 
 try:
     from urllib.parse import urlparse, urlunparse
 except ImportError:
     from urlparse import urlparse, urlunparse
 
+import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.0")
-from gi.repository import Gtk, WebKit2, GLib
+from gi.repository import Gtk, WebKit2
 
 log = logging.getLogger("pulsegui")
 
