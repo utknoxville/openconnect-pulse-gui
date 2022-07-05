@@ -28,17 +28,17 @@ except ImportError:
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.0")
-from gi.repository import Gtk, WebKit2
+from gi.repository import Gtk, WebKit2  # pylint: disable=wrong-import-position
 
 log = logging.getLogger("pulsegui")
 
 
-class PulseLoginView:
+class PulseLoginView:  # pylint: disable=too-many-instance-attributes,too-few-public-methods
     """
     Class responsible for displaying a single webpage during user interaction
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         uri,
         html=None,
@@ -114,7 +114,7 @@ class PulseLoginView:
         resource.connect("finished", self._log_resource_details, (request_id, request))
         resource.connect("sent-request", self._log_sent_request, (request_id, request))
 
-    def _tls_error(self, _webview, failing_uri, _certificate, errors, _user_data):
+    def _tls_error(self, _webview, failing_uri, _certificate, errors, _user_data):  # pylint: disable=too-many-arguments
         log.error(
             "TLS error on %s : %s. Use --insecure to bypass certificate validation.",
             failing_uri,
