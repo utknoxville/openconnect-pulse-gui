@@ -139,25 +139,6 @@ class PulseLoginView:
         content_details = "%d bytes of %s" % (content_length, content_type,)
         log.debug("[RESP %d] %s: %s", request_id, status_code, content_details)
 
-    def log_resource_text(
-        self, resource, result, content_type, charset=None, show_headers=None
-    ):
-        data = resource.get_data_finish(result)
-        content_details = "%d bytes of %s%s for " % (
-            len(data),
-            content_type,
-            ("; charset=" + charset) if charset else "",
-        )
-        log.info(
-            "[DATA   ] %sresource %s", content_details, resource.get_uri(),
-        )
-        if show_headers:
-            for h, v in show_headers.items():
-                print("%s: %s" % (h, v), file=sys.stderr)
-            print(file=sys.stderr)
-        if charset or content_type.startswith("text/"):
-            print(data.decode(charset or "utf-8"), file=sys.stderr)
-
     def _cookie_changed(self, event):
         uri = self._webview.get_uri()
         # if self.verbose:
