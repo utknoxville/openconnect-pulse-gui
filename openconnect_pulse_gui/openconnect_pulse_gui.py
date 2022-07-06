@@ -181,25 +181,25 @@ def parse_args(args=None, prog=None):
     """
     Parse command line arguments.
     """
-    p = argparse.ArgumentParser(prog=prog)
-    p.add_argument("server", help="Pulse Secure Connect URL")
-    p.add_argument(
+    parser = argparse.ArgumentParser(prog=prog)
+    parser.add_argument("server", help="Pulse Secure Connect URL")
+    parser.add_argument(
         "--insecure", action="store_true", help="Ignore invalid server certificate",
     )
-    p.add_argument(
+    parser.add_argument(
         "--session-cookie-name",
         default="DSID",
         help=argparse.SUPPRESS,  # "Name of the session cookie (default: %(default)s)"
     )
-    x = p.add_mutually_exclusive_group()
-    x.add_argument(
+    exclusive_group = parser.add_mutually_exclusive_group()
+    exclusive_group.add_argument(
         "-v",
         "--verbose",
         default=0,
         action="count",
         help="Increase verbosity of explanatory output to stderr",
     )
-    x.add_argument(
+    exclusive_group.add_argument(
         "-q",
         "--quiet",
         dest="verbose",
@@ -216,24 +216,24 @@ def parse_args(args=None, prog=None):
     # This could be worked around by implementing the Soup.CookieJar
     # interface in a secure manner
     #
-    p.add_argument(
+    parser.add_argument(
         "-p",
         "--persist-cookies",
         action="store_true",
         help=argparse.SUPPRESS,  # "Save non-session cookies to disk",
     )
-    p.add_argument(
+    parser.add_argument(
         "-c",
         "--cookie-file",
         default="~/.config/pulse-gui-cookies",
         help=argparse.SUPPRESS,  # "Store cookies in this file (instead of default %(default)s)",
     )
-    args = p.parse_args(args=None)
+    args = parser.parse_args(args=None)
 
     if args.persist_cookies and args.cookie_file:
         args.cookie_file = os.path.expanduser(args.cookie_file)
 
-    return p, args
+    return parser, args
 
 
 def do_openconnect(server, authcookie, run_openconnect=True):
@@ -258,13 +258,13 @@ def do_openconnect(server, authcookie, run_openconnect=True):
         return ret
 
 
-def saml_thread(jobQ, returnQ, closeEvent):
+def saml_thread(job_queue, result_queue, exit_event):
     """
     Create web view windows until success, failure or interrupt.
     """
-    while not closeEvent.is_set():
+    while not exit_event.is_set():
         try:
-            job = jobQ.get(block=False)
+            job = job_queue.get(block=False)
         except queue.Empty:
             time.sleep(0.1)
             continue
@@ -277,23 +277,23 @@ def saml_thread(jobQ, returnQ, closeEvent):
         )
         Gtk.main()
         if slv.user_closed:
-            returnQ.put({"error": "Login window closed by user", "retry": False})
+            result_queue.put({"error": "Login window closed by user", "retry": False})
         elif not slv.success:
-            returnQ.put(
+            result_queue.put(
                 {
                     "error": "Login window closed without producing session cookie",
                     "retry": True,
                 }
             )
         else:
-            returnQ.put({"auth_cookie": slv.auth_cookie})
+            result_queue.put({"auth_cookie": slv.auth_cookie})
 
 
 def main(prog=None):
     """
     Main entry. Parse arguments, create queues, run threads.
     """
-    p, args = parse_args(prog=prog)
+    parser, args = parse_args(prog=prog)
 
     log_levels = [logging.WARNING, logging.INFO, logging.DEBUG]
     if args.verbose > 2:
@@ -313,22 +313,22 @@ def main(prog=None):
     # Create a thread for GTK handling
     # This allows us to do things in the main python thread (e.g. catch SIGINT)
 
-    # closeEvent signals to Gtk thread that it should immediately stop
-    # when closeEvent is used, the main python thread calls Gtk.main_quit()
+    # exit_event signals to Gtk thread that it should immediately stop
+    # when exit_event is used, the main python thread calls Gtk.main_quit()
 
-    jobQ = queue.Queue()
-    returnQ = queue.Queue()
-    closeEvent = threading.Event()
+    job_queue = queue.Queue()
+    result_queue = queue.Queue()
+    exit_event = threading.Event()
 
-    webkitthread = threading.Thread(
-        target=saml_thread, args=(jobQ, returnQ, closeEvent)
+    webkit_thread = threading.Thread(
+        target=saml_thread, args=(job_queue, result_queue, exit_event)
     )
-    webkitthread.start()
+    webkit_thread.start()
 
     while True:
         try:
-            jobQ.put(args)
-            ret = returnQ.get()
+            job_queue.put(args)
+            ret = result_queue.get()
             if "error" in ret:
                 log.error(ret["error"])
                 if not ret["retry"]:
@@ -349,8 +349,8 @@ def main(prog=None):
                 break
             log.info("Got exit code %d. Retrying..", exit_code)
             time.sleep(1)
-    closeEvent.set()
-    webkitthread.join()
+    exit_event.set()
+    webkit_thread.join()
 
 
 if __name__ == "__main__":
