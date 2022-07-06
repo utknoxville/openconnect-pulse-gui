@@ -115,16 +115,17 @@ class PulseLoginView:
 
     def _log_sent_request(self, resource, request, redirected_response, userdata):
         request_id, request = userdata
-        new_uri = request.get_uri()
-        method = request.get_http_method() or "Request"
         if redirected_response:
             status_code = redirected_response.get_status_code()
             old_uri = redirected_response.get_uri()
+            new_uri = resource.get_uri()
             self._log.debug(
-                "[REQ2 %d] %s redirect to %s", request_id, status_code, old_uri
+                "[REQ2 %d] %s redirect from %s to %s", request_id, status_code, old_uri, new_uri
             )
         else:
-            self._log.debug("[REQ2 %d] %s %s", request_id, method, new_uri)
+            method = request.get_http_method() or "Request"
+            request_uri = request.get_uri()
+            self._log.debug("[REQ2 %d] %s %s", request_id, method, request_uri)
 
     def _log_resource_details(self, resource, userdata):
         request_id, request = userdata
