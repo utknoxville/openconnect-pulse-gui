@@ -51,7 +51,6 @@ class PulseLoginView:
         self.verbose = verbose
         self.auth_cookie = None
         self._session_cookie_name = session_cookie_name
-        self._log = logging.getLogger(__name__)
 
         self._ctx = WebKit2.WebContext.get_default()
         if not verify:
@@ -91,14 +90,14 @@ class PulseLoginView:
     def _close(self, *args, **kwargs):
         if not self.closed:
             self.closed = True
-            self._log.info("closing GTK")
+            log.info("closing GTK")
             # time.sleep(.1)
             Gtk.main_quit()
 
     def _log_request(self, webview, resource, request):
         request_id = self._request_id
         self._request_id += 1
-        # self._log.debug(
+        # log.debug(
         # "[REQ  %d] %s %s"
         # , request_id, request.get_http_method() or "Request", resource.get_uri(),
         # )
@@ -107,7 +106,7 @@ class PulseLoginView:
         resource.connect("sent-request", self._log_sent_request, (request_id, request))
 
     def _tls_error(self, webview, failing_uri, certificate, errors, user_data):
-        self._log.error(
+        log.error(
             "TLS error on {} : {}. Use --insecure to bypass certificate validation.".format(
                 failing_uri, ", ".join(errors.value_nicks)
             )
@@ -119,13 +118,13 @@ class PulseLoginView:
             status_code = redirected_response.get_status_code()
             old_uri = redirected_response.get_uri()
             new_uri = resource.get_uri()
-            self._log.debug(
+            log.debug(
                 "[REQ2 %d] %s redirect from %s to %s", request_id, status_code, old_uri, new_uri
             )
         else:
             method = request.get_http_method() or "Request"
             request_uri = request.get_uri()
-            self._log.debug("[REQ2 %d] %s %s", request_id, method, request_uri)
+            log.debug("[REQ2 %d] %s %s", request_id, method, request_uri)
 
     def _log_resource_details(self, resource, userdata):
         request_id, request = userdata
