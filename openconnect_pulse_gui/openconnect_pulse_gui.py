@@ -32,7 +32,6 @@ class PulseLoginView:
     def __init__(
         self,
         uri,
-        html=None,
         verbose=False,
         cookies=None,
         verify=True,
@@ -78,10 +77,7 @@ class PulseLoginView:
 
         self._request_id = 0
 
-        if html:
-            self._webview.load_html(html, uri)
-        else:
-            self._webview.load_uri(uri)
+        self._webview.load_uri(uri)
 
     def _user_close(self, *args, **kwargs):
         self.user_closed = True
