@@ -67,7 +67,7 @@ class PulseLoginView:
         self._webview = WebKit2.WebView()
         self._webview.connect("load-failed-with-tls-errors", self._tls_error, None)
 
-        self._window.resize(500, 500)
+        self._window.resize(960, 720)
         self._window.add(self._webview)
         self._window.show_all()
         self._window.set_title("Pulse Connect Login")
