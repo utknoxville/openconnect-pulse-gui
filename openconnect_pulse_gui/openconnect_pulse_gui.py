@@ -69,7 +69,6 @@ class PulseLoginView:
 
         self._window.resize(500, 500)
         self._window.add(self._webview)
-        self._window.show_all()
         self._window.set_title("Pulse Connect Login")
         self._window.connect("delete-event", self._user_close)
         self._window.connect("destroy", self._close)
@@ -82,6 +81,8 @@ class PulseLoginView:
             self._webview.load_html(html, uri)
         else:
             self._webview.load_uri(uri)
+
+        self._window.show_all()
 
     def _user_close(self, *args, **kwargs):
         self.user_closed = True
