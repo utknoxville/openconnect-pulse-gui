@@ -187,8 +187,8 @@ class PulseLoginView:
                     self._window.destroy()
 
 
-def parse_args(args=None):
-    p = argparse.ArgumentParser()
+def parse_args(args=None, prog=None):
+    p = argparse.ArgumentParser(prog=prog)
     p.add_argument("server", help="Pulse Secure Connect URL")
     p.add_argument(
         "--insecure", action="store_true", help="Ignore invalid server certificate",
@@ -290,8 +290,8 @@ def saml_thread(jobQ, returnQ, closeEvent):
             returnQ.put({"auth_cookie": slv.auth_cookie})
 
 
-def main():
-    p, args = parse_args()
+def main(prog=None):
+    p, args = parse_args(prog=prog)
 
     log_levels = [logging.WARNING, logging.INFO, logging.DEBUG]
     if args.verbose > 2:
