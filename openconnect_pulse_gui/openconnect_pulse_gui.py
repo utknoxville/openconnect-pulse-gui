@@ -65,7 +65,7 @@ class PulseLoginView:
             )
 
         self._webview = WebKit2.WebView()
-        self._webview.connect("load-failed-with-tls-errors", self._tls_error, None)
+        self._webview.connect("load-failed-with-tls-errors", self._tls_error)
 
         self._window.resize(500, 500)
         self._window.add(self._webview)
@@ -105,7 +105,7 @@ class PulseLoginView:
         resource.connect("finished", self._log_resource_details, (request_id, request))
         resource.connect("sent-request", self._log_sent_request, (request_id, request))
 
-    def _tls_error(self, webview, failing_uri, certificate, errors, user_data):
+    def _tls_error(self, webview, failing_uri, certificate, errors):
         log.error(
             "TLS error on {} : {}. Use --insecure to bypass certificate validation.".format(
                 failing_uri, ", ".join(errors.value_nicks)
