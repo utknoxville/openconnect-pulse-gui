@@ -1,3 +1,3 @@
 from .openconnect_pulse_gui import main
 
-main()
+main(prog=__package__)
