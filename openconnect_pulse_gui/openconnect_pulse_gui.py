@@ -235,6 +235,12 @@ def parse_args(args=None, prog=None):
         default="~/.config/pulse-gui-cookies",
         help=argparse.SUPPRESS,  # "Store cookies in this file (instead of default %(default)s)",
     )
+    p.add_argument(
+        "-b",
+        "--background",
+        action='store_true',
+        help="Run openconnect in the background"
+    )
     args = p.parse_args(args=None)
 
     if args.persist_cookies and args.cookie_file:
@@ -243,15 +249,19 @@ def parse_args(args=None, prog=None):
     return p, args
 
 
-def do_openconnect(server, authcookie, run_openconnect=True):
+def do_openconnect(server, authcookie, background, run_openconnect=True):
     cmd = [
         "openconnect",
         "--protocol",
         "nc",
         "-C",
         '{}={}'.format(authcookie.name, authcookie.value),
-        server,
     ]
+    if background:
+        cmd.append("--background")
+
+    cmd.append(server)
+
     if not run_openconnect:
         print(" ".join(cmd))
         return None
@@ -336,7 +346,7 @@ def main(prog=None):
 
             # extract response and convert to OpenConnect command-line
             exit_code = do_openconnect(
-                args.server, ret["auth_cookie"], run_openconnect=run_openconnect
+                args.server, ret["auth_cookie"], args.background, run_openconnect=run_openconnect
             )
         except KeyboardInterrupt:
             log.warning("User exited")
