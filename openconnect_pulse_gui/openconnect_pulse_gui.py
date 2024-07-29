@@ -22,7 +22,7 @@ except ImportError:
     from urlparse import urlparse, urlunparse
 
 gi.require_version("Gtk", "3.0")
-gi.require_version("WebKit2", "4.0")
+gi.require_version("WebKit2", "4.1")
 from gi.repository import Gtk, WebKit2, GLib
 
 log = logging.getLogger("pulsegui")
@@ -178,7 +178,7 @@ class PulseLoginView:
             #                cookie.secure,
             #                cookie.http_only,
             #            )
-            if cookie.name == self._session_cookie_name:
+            if cookie.get_name() == self._session_cookie_name:
                 if not self.success:
                     # Only call destroy once
                     self.auth_cookie = cookie
@@ -249,7 +249,7 @@ def do_openconnect(server, authcookie, run_openconnect=True):
         "--protocol",
         "nc",
         "-C",
-        '{}={}'.format(authcookie.name, authcookie.value),
+        '{}={}'.format(authcookie.get_name(), authcookie.get_value()),
         server,
     ]
     if not run_openconnect:
